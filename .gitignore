@@ -1,0 +1,5 @@
+PASSWORDS.md
+*.env
+.env*
+uploads/
+node_modules/

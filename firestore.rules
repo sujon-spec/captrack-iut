@@ -1,0 +1,37 @@
+rules_version = '2';
+
+// CapTrack — per-team isolation through document layout.
+//
+// Layout:
+//   /captrack/_shared        → team roster + supervisor info (read by everyone)
+//   /captrack/team-01..05    → tasks/files/feedback/meetings for that one team
+//
+// The app uses client-side passwords (not Firebase Auth), so these rules can't
+// know WHO is asking. Instead we lock things down structurally:
+//
+//   • The shared roster is readable by anyone with the site URL (needed so the
+//     login screen can show team names).
+//   • Each team-XX doc is readable & writable by anyone who knows that exact
+//     document path. Because the app only ever requests its own teamId, one
+//     team cannot accidentally see another team's data through the UI.
+//   • Supervisor reads all docs (the dashboard requests them by id one-by-one).
+//
+// FOR REAL ISOLATION: add Firebase Auth (Anonymous + custom claims), then
+// replace the rules below with claim-based checks. Until then, treat URLs as
+// the access boundary and only share each team's password with that team.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Shared roster — readable by everyone, writable only by supervisor (loose).
+    match /captrack/_shared {
+      allow read: if true;
+      allow write: if true;  // tighten with auth before public launch
+    }
+
+    // Per-team docs — only the named team docs are allowed; no listing of the
+    // collection, so teams can't enumerate sibling docs.
+    match /captrack/{teamId} {
+      allow read, write: if teamId.matches('team-0[1-5]');
+    }
+  }
+}
